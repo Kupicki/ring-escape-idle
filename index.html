@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ring Escape Idle</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Top HUD -->
+        <header id="hud">
+            <div class="hud-top">
+                <div class="stat-box coins-box">
+                    <span class="stat-label">MOEDAS</span>
+                    <span id="coins-display" class="stat-value">$0</span>
+                    <span id="cps-display" class="stat-sub">+$0/s</span>
+                </div>
+                <div class="stat-box stage-box">
+                    <span class="stat-label">FASE ATUAL</span>
+                    <span id="stage-display" class="stat-value">Fase 1</span>
+                    <span id="ring-display" class="stat-sub">Anel 1/3</span>
+                </div>
+                <div class="hud-controls">
+                    <button id="btn-audio" class="icon-btn" title="Alternar Som">🔊</button>
+                    <button id="btn-reset" class="icon-btn" title="Reiniciar Progresso">🔄</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Canvas Area -->
+        <main id="canvas-container">
+            <canvas id="gameCanvas"></canvas>
+            <div id="stage-clear-overlay" class="overlay hidden">
+                <div class="clear-title">STAGE CLEARED!</div>
+                <div id="clear-reward" class="clear-sub">+ $100 Bônus</div>
+            </div>
+        </main>
+
+        <!-- Bottom Upgrade Panel -->
+        <footer id="upgrade-panel">
+            <div class="panel-header">MELHORIAS</div>
+            <div class="upgrades-grid">
+                <button id="btn-upgrade-damage" class="upgrade-btn">
+                    <div class="upgrade-icon">💥</div>
+                    <div class="upgrade-info">
+                        <span class="upgrade-title">Dano da Bola</span>
+                        <span id="lvl-damage" class="upgrade-lvl">Lvl 1</span>
+                        <span id="stat-damage" class="upgrade-stat">Dano: 1</span>
+                    </div>
+                    <div class="upgrade-cost-container">
+                        <span id="cost-damage" class="upgrade-cost">$10</span>
+                    </div>
+                </button>
+
+                <button id="btn-upgrade-income" class="upgrade-btn">
+                    <div class="upgrade-icon">💰</div>
+                    <div class="upgrade-info">
+                        <span class="upgrade-title">Rendimento</span>
+                        <span id="lvl-income" class="upgrade-lvl">Lvl 1</span>
+                        <span id="stat-income" class="upgrade-stat">Mult: x1.0</span>
+                    </div>
+                    <div class="upgrade-cost-container">
+                        <span id="cost-income" class="upgrade-cost">$15</span>
+                    </div>
+                </button>
+
+                <button id="btn-upgrade-speed" class="upgrade-btn">
+                    <div class="upgrade-icon">⚡</div>
+                    <div class="upgrade-info">
+                        <span class="upgrade-title">Velocidade</span>
+                        <span id="lvl-speed" class="upgrade-lvl">Lvl 1</span>
+                        <span id="stat-speed" class="upgrade-stat">Vel: 100%</span>
+                    </div>
+                    <div class="upgrade-cost-container">
+                        <span id="cost-speed" class="upgrade-cost">$25</span>
+                    </div>
+                </button>
+
+                <button id="btn-upgrade-ball" class="upgrade-btn">
+                    <div class="upgrade-icon">⚪</div>
+                    <div class="upgrade-info">
+                        <span class="upgrade-title">Bola Extra</span>
+                        <span id="lvl-ball" class="upgrade-lvl">1 / 5</span>
+                        <span id="stat-ball" class="upgrade-stat">+1 Bola na arena</span>
+                    </div>
+                    <div class="upgrade-cost-container">
+                        <span id="cost-ball" class="upgrade-cost">$100</span>
+                    </div>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
