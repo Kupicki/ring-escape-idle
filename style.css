@@ -61,6 +61,7 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
 }
 
 .stat-box {
@@ -72,6 +73,7 @@ body {
     flex-direction: column;
     align-items: center;
     flex: 1;
+    min-width: 100px;
     backdrop-filter: blur(8px);
 }
 
@@ -100,20 +102,21 @@ body {
 .hud-controls {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
 }
 
 .lang-dropdown {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
+    background: #1e2338;
+    border: 1px solid var(--accent-cyan);
     color: var(--text-main);
-    padding: 6px 4px;
+    padding: 6px 8px;
     border-radius: 8px;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-family: 'Rajdhani', sans-serif;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     outline: none;
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
 }
 
 .lang-dropdown option {

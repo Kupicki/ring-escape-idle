@@ -772,7 +772,19 @@ function loadGame() {
     } catch (e) {}
 }
 
-// User interaction audio init
+// Prevent touch zooming or default gestures on game canvas container
+canvasContainer.addEventListener('touchstart', (e) => {
+    sfx.init();
+    if (e.target === canvas || e.target === canvasContainer) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+canvasContainer.addEventListener('click', (e) => {
+    sfx.init();
+});
+
+// User interaction audio init fallback
 window.addEventListener('click', () => sfx.init(), { once: true });
 window.addEventListener('touchstart', () => sfx.init(), { once: true });
 
