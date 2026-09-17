@@ -23,6 +23,8 @@ const TRANSLATIONS = {
         max: "MÁX",
         clearTitle: "STAGE CLEARED!",
         clearReward: "+${bonus} Bônus de Fase!",
+        failTitle: "SISTEMA COLAPSOU!",
+        failReward: "Os anéis esmagaram a bola!",
         resetConfirm: "Deseja realmente reiniciar todo o seu progresso?"
     },
     en: {
@@ -43,6 +45,8 @@ const TRANSLATIONS = {
         max: "MAX",
         clearTitle: "STAGE CLEARED!",
         clearReward: "+${bonus} Stage Bonus!",
+        failTitle: "SYSTEM COLLAPSED!",
+        failReward: "The rings crushed the ball!",
         resetConfirm: "Do you really want to reset all your progress?"
     },
     es: {
@@ -63,6 +67,8 @@ const TRANSLATIONS = {
         max: "MÁX",
         clearTitle: "¡NIVEL SUPERADO!",
         clearReward: "+${bonus} ¡Bono de Nivel!",
+        failTitle: "¡SISTEMA COLAPSADO!",
+        failReward: "¡Los anillos aplastaron la bola!",
         resetConfirm: "¿Realmente deseas reiniciar todo tu progreso?"
     }
 };
@@ -248,6 +254,30 @@ class SoundFX {
         });
     }
 
+    playStageFail() {
+        if (!state.audioEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.35);
+
+            gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.35);
+        } catch (e) {}
+    }
+
     playUpgrade() {
         if (!state.audioEnabled) return;
         this.init();
@@ -289,18 +319,25 @@ const PALETTES = [
 class Ring {
     constructor(radius, maxHp, color, rotationSpeed) {
         this.radius = radius;
+        this.targetRadius = radius;
         this.maxHp = maxHp;
         this.hp = maxHp;
         this.color = color;
         this.rotationSpeed = rotationSpeed;
         this.angle = Math.random() * Math.PI * 2;
         this.flashTimer = 0;
+        this.shrinkRate = 2.5; // Slow constant shrinking rate
     }
 
-    update(dt) {
+    update(dt, isCurrentTarget) {
         this.angle += this.rotationSpeed * dt;
         if (this.flashTimer > 0) {
             this.flashTimer -= dt;
+        }
+
+        // Active ring slowly shrinks over time
+        if (isCurrentTarget && this.radius > 25) {
+            this.radius -= this.shrinkRate * dt;
         }
     }
 
@@ -477,8 +514,43 @@ let rings = [];
 let balls = [];
 let particles = [];
 let floatingTexts = [];
+let isStageFailing = false;
 
 resizeCanvas();
+
+function drawCentralHpIndicator(ctx) {
+    if (state.activeRingIndex >= rings.length) return;
+
+    const ring = rings[state.activeRingIndex];
+    const hpRatio = Math.max(0, Math.min(1, ring.hp / ring.maxHp));
+    const hpPercent = Math.ceil(hpRatio * 100);
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+
+    // Glowing central core with opacity tied to current active ring HP
+    const coreRadius = Math.min(22, ring.radius * 0.4);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
+    ctx.fillStyle = ring.color;
+    ctx.globalAlpha = 0.15 + hpRatio * 0.7; // Dynamic opacity based on remaining HP
+    ctx.shadowColor = ring.color;
+    ctx.shadowBlur = 15 * hpRatio + 5;
+    ctx.fill();
+
+    // Central HP percentage text
+    ctx.globalAlpha = Math.max(0.3, hpRatio);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = "bold 11px 'Orbitron', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = '#000000';
+    ctx.fillText(`${hpPercent}%`, 0, 0);
+
+    ctx.restore();
+}
 
 // Upgrade Cost Formulas
 function getUpgradeCost(upgradeKey) {
@@ -488,19 +560,25 @@ function getUpgradeCost(upgradeKey) {
 
 // Helper: Collision detection between ball and active concentric ring
 function handleRingCollisions(ball) {
-    if (state.activeRingIndex >= rings.length) return;
+    if (state.activeRingIndex >= rings.length || isStageFailing) return;
 
     const ring = rings[state.activeRingIndex];
     const dx = ball.x - centerX;
     const dy = ball.y - centerY;
     const dist = Math.hypot(dx, dy);
 
-    if (dist + ball.radius >= ring.radius) {
-        const nx = dx / dist;
-        const ny = dy / dist;
+    // If ring shrunk too small (crushing ball), trigger stage failure
+    if (ring.radius <= ball.radius + 12) {
+        onStageFailed();
+        return;
+    }
 
-        ball.x = centerX + nx * (ring.radius - ball.radius);
-        ball.y = centerY + ny * (ring.radius - ball.radius);
+    if (dist + ball.radius >= ring.radius) {
+        const nx = dist === 0 ? 0 : dx / dist;
+        const ny = dist === 0 ? -1 : dy / dist;
+
+        ball.x = centerX + nx * Math.max(5, ring.radius - ball.radius);
+        ball.y = centerY + ny * Math.max(5, ring.radius - ball.radius);
 
         const dot = ball.vx * nx + ball.vy * ny;
         if (dot > 0) {
@@ -572,9 +650,28 @@ function onStageCleared() {
     }, 1200);
 }
 
+function onStageFailed() {
+    if (isStageFailing) return;
+    isStageFailing = true;
+
+    sfx.playStageFail();
+
+    const t = TRANSLATIONS[state.lang] || TRANSLATIONS.pt;
+    clearTitleDisplay.textContent = t.failTitle;
+    clearRewardDisplay.textContent = t.failReward;
+    stageClearOverlay.classList.remove('hidden');
+
+    setTimeout(() => {
+        stageClearOverlay.classList.add('hidden');
+        setupStage(state.stage);
+        isStageFailing = false;
+    }, 1200);
+}
+
 function setupStage(stageNum) {
     rings = [];
     state.activeRingIndex = 0;
+    isStageFailing = false;
 
     const numRings = Math.min(3 + Math.floor((stageNum - 1) / 2), 8);
     const palette = PALETTES[(stageNum - 1) % PALETTES.length];
@@ -809,11 +906,13 @@ function gameLoop(time) {
     ctx.clearRect(0, 0, width, height);
 
     rings.forEach((ring, idx) => {
-        ring.update(dt);
+        ring.update(dt, idx === state.activeRingIndex);
         if (idx >= state.activeRingIndex) {
             ring.draw(ctx, idx === state.activeRingIndex);
         }
     });
+
+    drawCentralHpIndicator(ctx);
 
     balls.forEach(ball => {
         ball.update(dt);
