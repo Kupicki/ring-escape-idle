@@ -3,6 +3,70 @@
  * Pure Vanilla JS HTML5 Canvas Implementation
  */
 
+// Translations Dictionary
+const TRANSLATIONS = {
+    pt: {
+        coins: "MOEDAS",
+        stage: "FASE ATUAL",
+        stagePrefix: "Fase",
+        ringPrefix: "Anel",
+        upgradesHeader: "MELHORIAS",
+        damageTitle: "Dano da Bola",
+        damageStat: "Dano",
+        incomeTitle: "Rendimento",
+        incomeStat: "Mult",
+        speedTitle: "Velocidade",
+        speedStat: "Vel",
+        ballTitle: "Bola Extra",
+        ballStat: "+1 Bola na arena",
+        ballMaxStat: "Máximo atingido",
+        max: "MÁX",
+        clearTitle: "STAGE CLEARED!",
+        clearReward: "+${bonus} Bônus de Fase!",
+        resetConfirm: "Deseja realmente reiniciar todo o seu progresso?"
+    },
+    en: {
+        coins: "COINS",
+        stage: "CURRENT STAGE",
+        stagePrefix: "Stage",
+        ringPrefix: "Ring",
+        upgradesHeader: "UPGRADES",
+        damageTitle: "Ball Damage",
+        damageStat: "Damage",
+        incomeTitle: "Income Mult",
+        incomeStat: "Mult",
+        speedTitle: "Ball Speed",
+        speedStat: "Speed",
+        ballTitle: "Extra Ball",
+        ballStat: "+1 Ball in arena",
+        ballMaxStat: "Maximum reached",
+        max: "MAX",
+        clearTitle: "STAGE CLEARED!",
+        clearReward: "+${bonus} Stage Bonus!",
+        resetConfirm: "Do you really want to reset all your progress?"
+    },
+    es: {
+        coins: "MONEDAS",
+        stage: "NIVEL ACTUAL",
+        stagePrefix: "Nivel",
+        ringPrefix: "Anillo",
+        upgradesHeader: "MEJORAS",
+        damageTitle: "Daño de Bola",
+        damageStat: "Daño",
+        incomeTitle: "Rendimiento",
+        incomeStat: "Mult",
+        speedTitle: "Velocidad",
+        speedStat: "Vel",
+        ballTitle: "Bola Extra",
+        ballStat: "+1 Bola en arena",
+        ballMaxStat: "Máximo alcanzado",
+        max: "MÁX",
+        clearTitle: "¡NIVEL SUPERADO!",
+        clearReward: "+${bonus} ¡Bono de Nivel!",
+        resetConfirm: "¿Realmente deseas reiniciar todo tu progreso?"
+    }
+};
+
 // Canvas setup
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -13,28 +77,38 @@ const coinsDisplay = document.getElementById('coins-display');
 const cpsDisplay = document.getElementById('cps-display');
 const stageDisplay = document.getElementById('stage-display');
 const ringDisplay = document.getElementById('ring-display');
+const labelCoins = document.getElementById('label-coins');
+const labelStage = document.getElementById('label-stage');
+const labelUpgradesHeader = document.getElementById('label-upgrades-header');
+
+const langSelect = document.getElementById('lang-select');
 const btnAudio = document.getElementById('btn-audio');
 const btnReset = document.getElementById('btn-reset');
 const stageClearOverlay = document.getElementById('stage-clear-overlay');
+const clearTitleDisplay = document.getElementById('clear-title');
 const clearRewardDisplay = document.getElementById('clear-reward');
 
 // Upgrade Buttons & Labels
 const btnUpgradeDamage = document.getElementById('btn-upgrade-damage');
+const titleDamage = document.getElementById('title-damage');
 const lvlDamage = document.getElementById('lvl-damage');
 const statDamage = document.getElementById('stat-damage');
 const costDamage = document.getElementById('cost-damage');
 
 const btnUpgradeIncome = document.getElementById('btn-upgrade-income');
+const titleIncome = document.getElementById('title-income');
 const lvlIncome = document.getElementById('lvl-income');
 const statIncome = document.getElementById('stat-income');
 const costIncome = document.getElementById('cost-income');
 
 const btnUpgradeSpeed = document.getElementById('btn-upgrade-speed');
+const titleSpeed = document.getElementById('title-speed');
 const lvlSpeed = document.getElementById('lvl-speed');
 const statSpeed = document.getElementById('stat-speed');
 const costSpeed = document.getElementById('cost-speed');
 
 const btnUpgradeBall = document.getElementById('btn-upgrade-ball');
+const titleBall = document.getElementById('title-ball');
 const lvlBall = document.getElementById('lvl-ball');
 const statBall = document.getElementById('stat-ball');
 const costBall = document.getElementById('cost-ball');
@@ -70,6 +144,7 @@ const state = {
     stage: 1,
     activeRingIndex: 0,
     audioEnabled: true,
+    lang: 'pt',
     upgrades: {
         damage: { level: 1, baseCost: 10, costMult: 1.15, inc: 1 },
         income: { level: 1, baseCost: 15, costMult: 1.15, inc: 0.25 },
@@ -376,16 +451,6 @@ class Ball {
         }
     }
 
-    applyImpulse(targetX, targetY, force = 350) {
-        const dx = targetX - this.x;
-        const dy = targetY - this.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist > 0) {
-            this.vx += (dx / dist) * force;
-            this.vy += (dy / dist) * force;
-        }
-    }
-
     draw(ctx) {
         for (let i = 0; i < this.trail.length; i++) {
             const point = this.trail[i];
@@ -490,11 +555,13 @@ function spawnShatterParticles(ring) {
 function onStageCleared() {
     sfx.playStageClear();
 
+    const t = TRANSLATIONS[state.lang] || TRANSLATIONS.pt;
     const stageBonus = Math.round(100 * Math.pow(1.3, state.stage - 1));
     state.coins += stageBonus;
     state.coinsEarnedThisSec += stageBonus;
 
-    clearRewardDisplay.textContent = `+$${stageBonus} Bônus de Fase!`;
+    clearTitleDisplay.textContent = t.clearTitle;
+    clearRewardDisplay.textContent = t.clearReward.replace('${bonus}', stageBonus);
     stageClearOverlay.classList.remove('hidden');
 
     setTimeout(() => {
@@ -525,7 +592,6 @@ function setupStage(stageNum) {
         rings.push(new Ring(radius, ringHp, palette.primary, rotSpeed));
     }
 
-    // Synchronize balls count with balls upgrade level
     const targetBallCount = state.upgrades.balls.level;
     while (balls.length < targetBallCount) {
         balls.push(new Ball(centerX, centerY - 15));
@@ -546,23 +612,37 @@ function setupStage(stageNum) {
 }
 
 function updateHUD() {
+    const t = TRANSLATIONS[state.lang] || TRANSLATIONS.pt;
+
+    labelCoins.textContent = t.coins;
+    labelStage.textContent = t.stage;
+    labelUpgradesHeader.textContent = t.upgradesHeader;
+
     coinsDisplay.textContent = `$${Math.floor(state.coins)}`;
     cpsDisplay.textContent = `+$${state.cps}/s`;
-    stageDisplay.textContent = `Fase ${state.stage}`;
+    stageDisplay.textContent = `${t.stagePrefix} ${state.stage}`;
 
     if (rings.length > 0) {
-        ringDisplay.textContent = `Anel ${Math.min(state.activeRingIndex + 1, rings.length)}/${rings.length}`;
+        ringDisplay.textContent = `${t.ringPrefix} ${Math.min(state.activeRingIndex + 1, rings.length)}/${rings.length}`;
     } else {
-        ringDisplay.textContent = `Anel 0/0`;
+        ringDisplay.textContent = `${t.ringPrefix} 0/0`;
     }
 }
 
 function updateUpgradePanel() {
+    const t = TRANSLATIONS[state.lang] || TRANSLATIONS.pt;
+
+    // Titles
+    titleDamage.textContent = t.damageTitle;
+    titleIncome.textContent = t.incomeTitle;
+    titleSpeed.textContent = t.speedTitle;
+    titleBall.textContent = t.ballTitle;
+
     // Damage Upgrade
     const costDmg = getUpgradeCost('damage');
     const dmgVal = state.upgrades.damage.level * state.upgrades.damage.inc;
     lvlDamage.textContent = `Lvl ${state.upgrades.damage.level}`;
-    statDamage.textContent = `Dano: ${dmgVal}`;
+    statDamage.textContent = `${t.damageStat}: ${dmgVal}`;
     costDamage.textContent = `$${costDmg}`;
     btnUpgradeDamage.disabled = state.coins < costDmg;
 
@@ -570,7 +650,7 @@ function updateUpgradePanel() {
     const costInc = getUpgradeCost('income');
     const incVal = (1 + (state.upgrades.income.level - 1) * state.upgrades.income.inc).toFixed(2);
     lvlIncome.textContent = `Lvl ${state.upgrades.income.level}`;
-    statIncome.textContent = `Mult: x${incVal}`;
+    statIncome.textContent = `${t.incomeStat}: x${incVal}`;
     costIncome.textContent = `$${costInc}`;
     btnUpgradeIncome.disabled = state.coins < costInc;
 
@@ -578,7 +658,7 @@ function updateUpgradePanel() {
     const costSpd = getUpgradeCost('speed');
     const spdVal = Math.round((1 + (state.upgrades.speed.level - 1) * state.upgrades.speed.inc) * 100);
     lvlSpeed.textContent = `Lvl ${state.upgrades.speed.level}`;
-    statSpeed.textContent = `Vel: ${spdVal}%`;
+    statSpeed.textContent = `${t.speedStat}: ${spdVal}%`;
     costSpeed.textContent = `$${costSpd}`;
     btnUpgradeSpeed.disabled = state.coins < costSpd;
 
@@ -586,13 +666,13 @@ function updateUpgradePanel() {
     const ballUp = state.upgrades.balls;
     if (ballUp.level >= ballUp.maxLevel) {
         lvlBall.textContent = `${ballUp.maxLevel} / ${ballUp.maxLevel}`;
-        statBall.textContent = `Máximo atingido`;
-        costBall.textContent = `MAX`;
+        statBall.textContent = t.ballMaxStat;
+        costBall.textContent = t.max;
         btnUpgradeBall.disabled = true;
     } else {
         const costBll = getUpgradeCost('balls');
         lvlBall.textContent = `${ballUp.level} / ${ballUp.maxLevel}`;
-        statBall.textContent = `+1 Bola na arena`;
+        statBall.textContent = t.ballStat;
         costBall.textContent = `$${costBll}`;
         btnUpgradeBall.disabled = state.coins < costBll;
     }
@@ -625,6 +705,14 @@ btnUpgradeIncome.addEventListener('click', () => buyUpgrade('income'));
 btnUpgradeSpeed.addEventListener('click', () => buyUpgrade('speed'));
 btnUpgradeBall.addEventListener('click', () => buyUpgrade('balls'));
 
+// Language Selector Event
+langSelect.addEventListener('change', (e) => {
+    state.lang = e.target.value;
+    saveGame();
+    updateHUD();
+    updateUpgradePanel();
+});
+
 // Control buttons
 btnAudio.addEventListener('click', () => {
     state.audioEnabled = !state.audioEnabled;
@@ -633,7 +721,8 @@ btnAudio.addEventListener('click', () => {
 });
 
 btnReset.addEventListener('click', () => {
-    if (confirm('Deseja realmente reiniciar todo o seu progresso?')) {
+    const t = TRANSLATIONS[state.lang] || TRANSLATIONS.pt;
+    if (confirm(t.resetConfirm)) {
         localStorage.removeItem('ring_escape_idle_save');
         location.reload();
     }
@@ -645,6 +734,7 @@ function saveGame() {
         coins: state.coins,
         stage: state.stage,
         audioEnabled: state.audioEnabled,
+        lang: state.lang,
         upgrades: {
             damage: state.upgrades.damage.level,
             income: state.upgrades.income.level,
@@ -668,6 +758,10 @@ function loadGame() {
                 state.audioEnabled = data.audioEnabled;
                 btnAudio.textContent = state.audioEnabled ? '🔊' : '🔇';
             }
+            if (data.lang && TRANSLATIONS[data.lang]) {
+                state.lang = data.lang;
+                langSelect.value = data.lang;
+            }
             if (data.upgrades) {
                 if (data.upgrades.damage) state.upgrades.damage.level = data.upgrades.damage;
                 if (data.upgrades.income) state.upgrades.income.level = data.upgrades.income;
@@ -678,24 +772,9 @@ function loadGame() {
     } catch (e) {}
 }
 
-// Tap / Click handling
-function handlePointerDown(e) {
-    sfx.init();
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
-    balls.forEach(ball => {
-        ball.applyImpulse(clickX, clickY);
-    });
-}
-
-canvas.addEventListener('mousedown', handlePointerDown);
-canvas.addEventListener('touchstart', (e) => {
-    if (e.touches.length > 0) {
-        handlePointerDown(e.touches[0]);
-    }
-}, { passive: true });
+// User interaction audio init
+window.addEventListener('click', () => sfx.init(), { once: true });
+window.addEventListener('touchstart', () => sfx.init(), { once: true });
 
 // CPS Timer
 setInterval(() => {
